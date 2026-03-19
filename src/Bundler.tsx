@@ -1,17 +1,19 @@
 import React, { useState } from "react";
-import { Target } from "./component";
+import { MenuListComposition, Target } from "./component";
 import { targetStruct } from "./types";
+import { Button } from "@mui/material";
+import { Add } from "@mui/icons-material";
 
 export const Bundler = () => {
   const [targetData, setTargetData] = useState<Array<targetStruct>>([
     {
-      id: "1234",
+      id: Date.now().toString(),
       title: "Emergency Fund",
       targetNumber: 600000,
       currentNumber: 6500,
     },
     {
-      id: "1234",
+      id: Date.now().toString(),
       title: "Immediate Fund",
       targetNumber: 600000,
       currentNumber: 6500,
@@ -20,6 +22,24 @@ export const Bundler = () => {
 
   return (
     <>
+      <Button
+        variant="contained"
+        endIcon={<Add />}
+        onClick={() =>
+          setTargetData((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              title: "Add title",
+              targetNumber: 100,
+              currentNumber: 0,
+            },
+          ])
+        }
+      >
+        Add
+      </Button>
+
       {targetData &&
         targetData.map((key) => (
           <Target

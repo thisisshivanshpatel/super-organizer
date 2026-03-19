@@ -6,6 +6,7 @@ import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
 import { Button, Chip } from "@mui/material";
 import { useState } from "react";
 import { targetStruct } from "../types";
+import { MenuListComposition } from "./generics/MenuList.component";
 
 const BorderLinearProgress = styled(LinearProgress)(({ theme }) => ({
   height: 20,
@@ -40,7 +41,10 @@ export const Target = ({
 
   return (
     <div className="flex flex-col justify-center bg-[#FCBF49] p-4 rounded-3xl m-2">
-      <h1 className="font-mono font-bold text-amber-50">{title}</h1>
+      <div className="flex justify-between">
+        <h1 className="font-mono font-bold text-amber-50">{title}</h1>
+        <MenuListComposition />
+      </div>
       <BorderLinearProgress variant="determinate" value={progressValue} />
       <div className="flex justify-between flex-wrap mt-2 mb-2 space-y-2">
         <Chip avatar={<CurrencyRupeeIcon />} label={number} />
