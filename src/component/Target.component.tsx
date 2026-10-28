@@ -2,64 +2,97 @@ import { styled } from "@mui/material/styles";
 import LinearProgress, {
   linearProgressClasses,
 } from "@mui/material/LinearProgress";
-import CurrencyRupeeIcon from "@mui/icons-material/CurrencyRupee";
 import { Button, Chip } from "@mui/material";
-import { useState } from "react";
+import { CheckCircle, Savings } from "@mui/icons-material";
 import { targetStruct } from "../types";
+import { formatCurrency } from "../utils";
 import { MenuListComposition } from "./generics/MenuList.component";
 
 const BorderLinearProgress = styled(LinearProgress)(({ theme }) => ({
-  height: 20,
-  borderRadius: 10,
+  height: 14,
+  borderRadius: 7,
   [`&.${linearProgressClasses.colorPrimary}`]: {
-    backgroundColor: theme.palette.grey[200],
+    backgroundColor: "#f3e3c3",
     ...theme.applyStyles("dark", {
       backgroundColor: theme.palette.grey[800],
     }),
   },
   [`& .${linearProgressClasses.bar}`]: {
-    borderRadius: 10,
+    borderRadius: 7,
     backgroundColor: "#6FAF4F",
-    ...theme.applyStyles("dark", {
-      backgroundColor: "#6FAF4F",
-    }),
   },
 }));
 
-export const Target = ({
-  id,
-  targetNumber,
-  currentNumber,
-  title,
-}: targetStruct) => {
-  const [number, setNumber] = useState<number>(currentNumber);
+type TargetProps = {
+  target: targetStruct;
+  onAddMoney: (target: targetStruct) => void;
+  onEdit: (target: targetStruct) => void;
+  onDelete: (target: targetStruct) => void;
+};
+
+export const Target = ({ target, onAddMoney, onEdit, onDelete }: TargetProps) => {
+  const { title, targetNumber, currentNumber } = target;
 
   // Progress is shown as a percentage of the target value
   const progressValue = targetNumber
-    ? Math.min(100, Math.round((number / targetNumber) * 100))
+    ? Math.min(100, Math.round((currentNumber / targetNumber) * 100))
     : 0;
+  const remaining = Math.max(0, targetNumber - currentNumber);
+  const completed = currentNumber >= targetNumber;
 
   return (
-    <div className="flex flex-col justify-center bg-[#FCBF49] p-4 rounded-3xl m-2">
-      <div className="flex justify-between">
-        <h1 className="font-mono font-bold text-amber-50">{title}</h1>
-        <MenuListComposition />
+    <div className="flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-lg shadow-amber-900/5 ring-1 ring-amber-900/5 transition hover:-translate-y-0.5 hover:shadow-xl">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#FCBF49] text-white">
+            <Savings />
+          </div>
+          <div className="min-w-0">
+            <h2 className="truncate font-semibold text-stone-800" title={title}>
+              {title}
+            </h2>
+            <p className="text-xs text-stone-500">
+              Target {formatCurrency(targetNumber)}
+            </p>
+          </div>
+        </div>
+        <MenuListComposition
+          onEdit={() => onEdit(target)}
+          onDelete={() => onDelete(target)}
+        />
       </div>
-      <BorderLinearProgress variant="determinate" value={progressValue} />
-      <div className="flex justify-between flex-wrap mt-2 mb-2 space-y-2">
-        <Chip avatar={<CurrencyRupeeIcon />} label={number} />
-        <Chip avatar={<CurrencyRupeeIcon />} label={targetNumber} />
+
+      <div>
+        <div className="mb-2 flex items-end justify-between">
+          <span className="text-2xl font-bold text-stone-800">
+            {formatCurrency(currentNumber)}
+          </span>
+          <span className="text-sm font-semibold text-[#4f8a33]">
+            {progressValue}%
+          </span>
+        </div>
+        <BorderLinearProgress variant="determinate" value={progressValue} />
+        <div className="mt-2 text-xs text-stone-500">
+          {completed ? (
+            <Chip
+              icon={<CheckCircle />}
+              label="Goal reached"
+              color="success"
+              size="small"
+            />
+          ) : (
+            <>{formatCurrency(remaining)} to go</>
+          )}
+        </div>
       </div>
+
       <Button
         variant="contained"
-        onClick={() =>
-          setNumber((prev) => {
-            const next = prev + 10000;
-            return next <= targetNumber ? next : prev;
-          })
-        }
+        disableElevation
+        onClick={() => onAddMoney(target)}
+        sx={{ borderRadius: 3, py: 1 }}
       >
-        Add Money
+        Add / Withdraw
       </Button>
     </div>
   );

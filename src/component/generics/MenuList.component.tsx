@@ -1,17 +1,27 @@
 import * as React from "react";
-import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import Grow from "@mui/material/Grow";
 import Paper from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
-import Stack from "@mui/material/Stack";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
 import { Delete, Edit, MoreHoriz } from "@mui/icons-material";
 
-export function MenuListComposition() {
+type MenuListCompositionProps = {
+  onEdit: () => void;
+  onDelete: () => void;
+};
+
+export function MenuListComposition({
+  onEdit,
+  onDelete,
+}: MenuListCompositionProps) {
   const [open, setOpen] = React.useState(false);
   const anchorRef = React.useRef<HTMLButtonElement>(null);
+  const menuId = React.useId();
 
   const handleToggle = () => {
     setOpen((prevOpen) => !prevOpen);
@@ -28,6 +38,11 @@ export function MenuListComposition() {
     setOpen(false);
   };
 
+  const handleSelect = (action: () => void) => () => {
+    setOpen(false);
+    action();
+  };
+
   function handleListKeyDown(event: React.KeyboardEvent) {
     if (event.key === "Tab") {
       event.preventDefault();
@@ -41,63 +56,69 @@ export function MenuListComposition() {
   const prevOpen = React.useRef(open);
   React.useEffect(() => {
     if (prevOpen.current === true && open === false) {
-      anchorRef.current!.focus();
+      anchorRef.current?.focus();
     }
 
     prevOpen.current = open;
   }, [open]);
 
   return (
-    <Stack direction="row" spacing={2}>
-      <div>
-        <Button
-          ref={anchorRef}
-          id="composition-button"
-          aria-controls={open ? "composition-menu" : undefined}
-          aria-expanded={open ? "true" : undefined}
-          aria-haspopup="true"
-          onClick={handleToggle}
-        >
-          <MoreHoriz />
-        </Button>
-        <Popper
-          open={open}
-          anchorEl={anchorRef.current}
-          role={undefined}
-          placement="bottom-start"
-          transition
-          disablePortal
-          style={{ zIndex: 80000000 }}
-        >
-          {({ TransitionProps, placement }) => (
-            <Grow
-              {...TransitionProps}
-              style={{
-                transformOrigin:
-                  placement === "bottom-start" ? "left top" : "left bottom",
-              }}
-            >
-              <Paper>
-                <ClickAwayListener onClickAway={handleClose}>
-                  <MenuList
-                    autoFocusItem={open}
-                    id="composition-menu"
-                    aria-labelledby="composition-button"
-                    onKeyDown={handleListKeyDown}
+    <div>
+      <IconButton
+        ref={anchorRef}
+        size="small"
+        aria-label="More options"
+        aria-controls={open ? menuId : undefined}
+        aria-expanded={open ? "true" : undefined}
+        aria-haspopup="true"
+        onClick={handleToggle}
+      >
+        <MoreHoriz />
+      </IconButton>
+      <Popper
+        open={open}
+        anchorEl={anchorRef.current}
+        role={undefined}
+        placement="bottom-end"
+        transition
+        style={{ zIndex: 1300 }}
+      >
+        {({ TransitionProps, placement }) => (
+          <Grow
+            {...TransitionProps}
+            style={{
+              transformOrigin:
+                placement === "bottom-end" ? "right top" : "right bottom",
+            }}
+          >
+            <Paper elevation={6} sx={{ borderRadius: 3, minWidth: 140 }}>
+              <ClickAwayListener onClickAway={handleClose}>
+                <MenuList
+                  autoFocusItem={open}
+                  id={menuId}
+                  onKeyDown={handleListKeyDown}
+                >
+                  <MenuItem onClick={handleSelect(onEdit)}>
+                    <ListItemIcon>
+                      <Edit fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Edit</ListItemText>
+                  </MenuItem>
+                  <MenuItem
+                    onClick={handleSelect(onDelete)}
+                    sx={{ color: "error.main" }}
                   >
-                    <MenuItem onClick={handleClose}>
-                      <Edit /> Edit
-                    </MenuItem>
-                    <MenuItem onClick={handleClose}>
-                      <Delete /> Delete
-                    </MenuItem>
-                  </MenuList>
-                </ClickAwayListener>
-              </Paper>
-            </Grow>
-          )}
-        </Popper>
-      </div>
-    </Stack>
+                    <ListItemIcon>
+                      <Delete fontSize="small" color="error" />
+                    </ListItemIcon>
+                    <ListItemText>Delete</ListItemText>
+                  </MenuItem>
+                </MenuList>
+              </ClickAwayListener>
+            </Paper>
+          </Grow>
+        )}
+      </Popper>
+    </div>
   );
 }

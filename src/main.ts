@@ -1,7 +1,14 @@
-import { app, BrowserWindow, ipcMain, dialog } from "electron";
-import * as fs from "fs";
+import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "node:path";
 import started from "electron-squirrel-startup";
+import {
+  addToTarget,
+  closeDb,
+  createTarget,
+  deleteTarget,
+  listTargets,
+  updateTarget,
+} from "./database/db";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -11,8 +18,11 @@ if (started) {
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1100,
+    height: 760,
+    minWidth: 420,
+    minHeight: 500,
+    backgroundColor: "#f5e9d8",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       webSecurity: false,
@@ -29,8 +39,10 @@ const createWindow = () => {
     );
   }
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  // Open the DevTools in development only.
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    mainWindow.webContents.openDevTools();
+  }
 };
 
 // This method will be called when Electron has finished
@@ -38,55 +50,14 @@ const createWindow = () => {
 // Some APIs can only be used after this event occurs.
 app.on("ready", createWindow);
 
-// IPC handlers for file system operations
-ipcMain.handle("read-file", async (event, filePath) => {
-  try {
-    return fs.readFileSync(filePath, "utf8");
-  } catch (error) {
-    throw new Error(`Failed to read file: ${error.message}`);
-  }
-});
-
-ipcMain.handle("write-file", async (event, filePath, content) => {
-  try {
-    fs.writeFileSync(filePath, content, "utf8");
-    return true;
-  } catch (error) {
-    throw new Error(`Failed to write file: ${error.message}`);
-  }
-});
-
-ipcMain.handle("read-dir", async (event, dirPath) => {
-  try {
-    return fs.readdirSync(dirPath);
-  } catch (error) {
-    throw new Error(`Failed to read directory: ${error.message}`);
-  }
-});
-
-ipcMain.handle("file-exists", async (event, filePath) => {
-  try {
-    return fs.existsSync(filePath);
-  } catch (error) {
-    return false;
-  }
-});
-
-ipcMain.handle("open-file-dialog", async () => {
-  const result = await dialog.showOpenDialog({
-    properties: ["openFile"],
-  });
-  return result.filePaths[0] || null;
-});
-
-ipcMain.handle("save-file-dialog", async (event, content) => {
-  const result = await dialog.showSaveDialog({});
-  if (!result.canceled && result.filePath) {
-    fs.writeFileSync(result.filePath, content, "utf8");
-    return result.filePath;
-  }
-  return null;
-});
+// IPC handlers for target CRUD operations (backed by SQLite)
+ipcMain.handle("targets:list", () => listTargets());
+ipcMain.handle("targets:create", (event, input) => createTarget(input));
+ipcMain.handle("targets:update", (event, id, input) => updateTarget(id, input));
+ipcMain.handle("targets:add-amount", (event, id, amount) =>
+  addToTarget(id, amount),
+);
+ipcMain.handle("targets:delete", (event, id) => deleteTarget(id));
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
@@ -95,6 +66,10 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+app.on("will-quit", () => {
+  closeDb();
 });
 
 app.on("activate", () => {
