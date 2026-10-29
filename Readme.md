@@ -41,6 +41,8 @@ so no native module needs to be rebuilt.
 
 ## Building
 
+- For Mac
+
 ```bash
 npm run make                                              # DMG + zip for your Mac (Apple Silicon)
 npm run make -- --targets @electron-forge/maker-dmg       # DMG only
@@ -48,3 +50,15 @@ npm run make -- --arch=x64                                # for Intel Macs
 npm run make -- --arch=universal                          # one DMG for both
 
 ```
+
+- windows
+
+```bash
+git clone <your-repo-url>
+cd super-organizer
+npm ci
+npm run make
+```
+
+- The installer appears in out\make\squirrel.windows\x64\: a … Setup.exe, plus a .nupkg and a RELEASES file. You only need those two if you add auto-updates later. Share the Setup.exe.
+For Windows on ARM devices, run npm run make -- --arch=arm64.
