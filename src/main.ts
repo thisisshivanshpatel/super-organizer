@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "node:path";
 import started from "electron-squirrel-startup";
 import {
+  addPrincipal,
   addToTarget,
   closeDb,
   createTarget,
@@ -57,6 +58,9 @@ ipcMain.handle("targets:create", (event, input) => createTarget(input));
 ipcMain.handle("targets:update", (event, id, input) => updateTarget(id, input));
 ipcMain.handle("targets:add-amount", (event, id, amount, note) =>
   addToTarget(id, amount, note),
+);
+ipcMain.handle("targets:add-principal", (event, id, amount, note) =>
+  addPrincipal(id, amount, note),
 );
 ipcMain.handle("targets:transactions", (event, id) => listTransactions(id));
 ipcMain.handle("targets:delete", (event, id) => deleteTarget(id));

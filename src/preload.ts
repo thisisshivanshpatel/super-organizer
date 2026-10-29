@@ -8,6 +8,8 @@ const targets: targetsAPI = {
     ipcRenderer.invoke("targets:update", id, input),
   addAmount: (id: number, amount: number, note?: string) =>
     ipcRenderer.invoke("targets:add-amount", id, amount, note),
+  addPrincipal: (id: number, amount: number, note?: string) =>
+    ipcRenderer.invoke("targets:add-principal", id, amount, note),
   transactions: (id: number) => ipcRenderer.invoke("targets:transactions", id),
   remove: (id: number) => ipcRenderer.invoke("targets:delete", id),
 };

@@ -7,13 +7,25 @@ import {
   DialogContent,
   DialogTitle,
 } from "@mui/material";
-import { ArrowDownward, ArrowUpward, ReceiptLong } from "@mui/icons-material";
-import { targetStruct, transactionStruct } from "../types";
+import {
+  Add,
+  ArrowDownward,
+  ArrowUpward,
+  ReceiptLong,
+} from "@mui/icons-material";
+import { targetKind, targetStruct, transactionStruct } from "../types";
 import { formatCurrency, formatDateTime, getErrorMessage } from "../utils";
 
 type TransactionHistoryDialogProps = {
   target: targetStruct | null;
   onClose: () => void;
+};
+
+// Fallback labels for transactions recorded without a note
+const DEFAULT_LABELS: Record<targetKind, { in: string; out: string; principal: string }> = {
+  savings: { in: "Deposit", out: "Withdrawal", principal: "Target changed" },
+  debt: { in: "Payment", out: "Payment reversed", principal: "Borrowed" },
+  lent: { in: "Received", out: "Repayment reversed", principal: "Lent" },
 };
 
 export const TransactionHistoryDialog = ({
@@ -39,12 +51,44 @@ export const TransactionHistoryDialog = ({
     };
   }, [target]);
 
-  const deposited = transactions
-    .filter((t) => t.amount > 0)
+  const kind = target?.kind ?? "savings";
+  const isLoan = kind !== "savings";
+  const labels = DEFAULT_LABELS[kind];
+
+  const balanceIn = transactions
+    .filter((t) => t.type === "balance" && t.amount > 0)
     .reduce((sum, t) => sum + t.amount, 0);
-  const withdrawn = transactions
-    .filter((t) => t.amount < 0)
+  const balanceOut = transactions
+    .filter((t) => t.type === "balance" && t.amount < 0)
     .reduce((sum, t) => sum - t.amount, 0);
+
+  const tiles = !target
+    ? []
+    : isLoan
+      ? [
+          {
+            label: kind === "debt" ? "Total repaid" : "Received back",
+            value: target.currentNumber,
+            className: "bg-green-50 text-[#4f8a33]",
+          },
+          {
+            label: kind === "debt" ? "Still owed" : "Still to receive",
+            value: Math.max(0, target.targetNumber - target.currentNumber),
+            className: "bg-red-50 text-[#b42318]",
+          },
+        ]
+      : [
+          {
+            label: "Total added",
+            value: balanceIn,
+            className: "bg-green-50 text-[#4f8a33]",
+          },
+          {
+            label: "Total withdrawn",
+            value: balanceOut,
+            className: "bg-orange-50 text-[#c2410c]",
+          },
+        ];
 
   return (
     <Dialog open={!!target} onClose={onClose} maxWidth="sm" fullWidth>
@@ -52,6 +96,7 @@ export const TransactionHistoryDialog = ({
         {target?.title}
         <span className="block text-sm font-normal text-stone-500">
           Transaction history
+          {target?.counterparty && ` · ${target.counterparty}`}
         </span>
       </DialogTitle>
       <DialogContent dividers>
@@ -69,32 +114,43 @@ export const TransactionHistoryDialog = ({
         ) : (
           <>
             <div className="mb-4 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl bg-green-50 p-3">
-                <p className="text-xs text-stone-500">Total added</p>
-                <p className="font-semibold text-[#4f8a33]">
-                  {formatCurrency(deposited)}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-orange-50 p-3">
-                <p className="text-xs text-stone-500">Total withdrawn</p>
-                <p className="font-semibold text-[#c2410c]">
-                  {formatCurrency(withdrawn)}
-                </p>
-              </div>
+              {tiles.map((tile) => (
+                <div key={tile.label} className={`rounded-2xl p-3 ${tile.className}`}>
+                  <p className="text-xs text-stone-500">{tile.label}</p>
+                  <p className="font-semibold">{formatCurrency(tile.value)}</p>
+                </div>
+              ))}
             </div>
             <ul className="divide-y divide-stone-100">
               {transactions.map((t) => {
-                const isDeposit = t.amount > 0;
+                const isPrincipal = t.type === "principal";
+                const isIn = !isPrincipal && t.amount > 0;
+                const label =
+                  t.note ||
+                  (isPrincipal ? labels.principal : isIn ? labels.in : labels.out);
+                const tone = isIn
+                  ? "bg-green-100 text-[#4f8a33]"
+                  : isPrincipal
+                    ? "bg-sky-100 text-[#0369a1]"
+                    : "bg-orange-100 text-[#c2410c]";
+                const amountTone = isIn
+                  ? "text-[#4f8a33]"
+                  : isPrincipal
+                    ? "text-[#0369a1]"
+                    : "text-[#c2410c]";
+                // Loans show what is still outstanding; savings show the balance
+                const after =
+                  isLoan && t.totalAfter !== null
+                    ? `Left ${formatCurrency(Math.max(0, t.totalAfter - t.balanceAfter))}`
+                    : `Bal. ${formatCurrency(t.balanceAfter)}`;
                 return (
                   <li key={t.id} className="flex items-center gap-3 py-3">
                     <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                        isDeposit
-                          ? "bg-green-100 text-[#4f8a33]"
-                          : "bg-orange-100 text-[#c2410c]"
-                      }`}
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${tone}`}
                     >
-                      {isDeposit ? (
+                      {isPrincipal ? (
+                        <Add fontSize="small" />
+                      ) : isIn ? (
                         <ArrowDownward fontSize="small" />
                       ) : (
                         <ArrowUpward fontSize="small" />
@@ -102,24 +158,18 @@ export const TransactionHistoryDialog = ({
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-stone-800">
-                        {t.note || (isDeposit ? "Deposit" : "Withdrawal")}
+                        {label}
                       </p>
                       <p className="text-xs text-stone-500">
                         {formatDateTime(t.createdAt)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p
-                        className={`text-sm font-semibold ${
-                          isDeposit ? "text-[#4f8a33]" : "text-[#c2410c]"
-                        }`}
-                      >
-                        {isDeposit ? "+" : "−"}
+                      <p className={`text-sm font-semibold ${amountTone}`}>
+                        {t.amount >= 0 ? "+" : "−"}
                         {formatCurrency(Math.abs(t.amount))}
                       </p>
-                      <p className="text-xs text-stone-400">
-                        Bal. {formatCurrency(t.balanceAfter)}
-                      </p>
+                      <p className="text-xs text-stone-400">{after}</p>
                     </div>
                   </li>
                 );

@@ -1,12 +1,16 @@
 # Super-Organizer
 
-A desktop app (Electron + React + MUI + Tailwind) for tracking savings goals.
+A desktop app (Electron + React + MUI + Tailwind) for tracking savings goals, debts and money lent.
 
 ## Features
 
-- Create, edit and delete savings goals (title, target amount, amount already saved)
-- Add or withdraw money from a goal, with quick-amount shortcuts
-- Overview of the total saved, the total target and how many goals are complete
+- Three kinds of entries, each with create, edit and delete:
+  - **Savings**: a goal amount you save towards (add money / withdraw)
+  - **Debt**: money you owe a person or a lender (pay back / borrow more)
+  - **Lent**: money someone owes you (received / lend more)
+- Debts and money lent record who it's with and an optional due date, and are flagged when overdue
+- Every change is recorded in a per-entry transaction history, with optional notes
+- Overview of the total saved, how much you owe and how much you're owed
 - All data is stored locally in SQLite
 
 ## Getting started
@@ -28,7 +32,7 @@ so no native module needs to be rebuilt.
 
 | Layer            | File                    | Responsibility                                              |
 | ---------------- | ----------------------- | ----------------------------------------------------------- |
-| Database         | `src/database/db.ts`    | Schema setup, validation and CRUD queries                    |
+| Database         | `src/database/db.ts`    | Schema setup and migrations, validation, CRUD and transactions |
 | Main process     | `src/main.ts`           | Registers the `targets:*` IPC handlers                       |
 | Preload          | `src/preload.ts`        | Exposes `window.electronAPI.targets` to the renderer         |
 | Renderer         | `src/Bundler.tsx`       | Loads goals and manages the create/edit/delete/add-money dialogs |

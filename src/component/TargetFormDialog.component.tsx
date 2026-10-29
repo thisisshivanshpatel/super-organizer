@@ -8,65 +8,84 @@ import {
   InputAdornment,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
-import { targetInput, targetStruct } from "../types";
+import { targetInput, targetKind, targetStruct } from "../types";
+import { KIND_CONFIG, KINDS } from "../utils";
 
 type TargetFormDialogProps = {
   open: boolean;
   // When provided the dialog edits this target, otherwise it creates a new one
   target?: targetStruct | null;
+  // Type preselected when creating (e.g. the tab the user is on)
+  defaultKind?: targetKind;
   onSubmit: (input: targetInput) => Promise<void>;
   onClose: () => void;
+};
+
+const DIALOG_TITLES: Record<targetKind, string> = {
+  savings: "savings goal",
+  debt: "debt",
+  lent: "money lent",
 };
 
 export const TargetFormDialog = ({
   open,
   target,
+  defaultKind = "savings",
   onSubmit,
   onClose,
 }: TargetFormDialogProps) => {
+  const [kind, setKind] = useState<targetKind>(defaultKind);
   const [title, setTitle] = useState("");
+  const [counterparty, setCounterparty] = useState("");
   const [targetNumber, setTargetNumber] = useState("");
   const [currentNumber, setCurrentNumber] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setKind(target?.kind ?? defaultKind);
     setTitle(target?.title ?? "");
+    setCounterparty(target?.counterparty ?? "");
     setTargetNumber(target ? String(target.targetNumber) : "");
     setCurrentNumber(target ? String(target.currentNumber) : "0");
+    setDueDate(target?.dueDate ?? "");
     setTouched(false);
-  }, [open, target]);
+  }, [open, target, defaultKind]);
 
-  const titleError = touched && !title.trim() ? "Title is required" : "";
-  const targetError =
-    touched && !(Number(targetNumber) > 0)
-      ? "Target must be greater than 0"
-      : "";
+  const config = KIND_CONFIG[kind];
+  const isLoan = kind !== "savings";
+  const total = Number(targetNumber);
+  const current = Number(currentNumber);
+
+  const titleError = !title.trim() ? "Title is required" : "";
+  const targetError = !(total > 0) ? "Amount must be greater than 0" : "";
   const currentError =
-    touched && (currentNumber === "" || Number(currentNumber) < 0)
-      ? "Saved amount cannot be negative"
-      : "";
+    currentNumber === "" || current < 0
+      ? "Amount cannot be negative"
+      : isLoan && total > 0 && current > total
+        ? `Cannot exceed the ${config.totalLabel.toLowerCase()}`
+        : "";
+  const hasErrors = !!(titleError || targetError || currentError);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setTouched(true);
-    if (
-      !title.trim() ||
-      !(Number(targetNumber) > 0) ||
-      currentNumber === "" ||
-      Number(currentNumber) < 0
-    ) {
-      return;
-    }
+    if (hasErrors) return;
 
     setSubmitting(true);
     try {
       await onSubmit({
+        kind,
         title: title.trim(),
-        targetNumber: Number(targetNumber),
-        currentNumber: Number(currentNumber),
+        targetNumber: total,
+        currentNumber: current,
+        counterparty: isLoan ? counterparty.trim() || null : null,
+        dueDate: isLoan ? dueDate || null : null,
       });
     } finally {
       setSubmitting(false);
@@ -83,39 +102,87 @@ export const TargetFormDialog = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <form onSubmit={handleSubmit} noValidate>
-        <DialogTitle>{target ? "Edit goal" : "New savings goal"}</DialogTitle>
+        <DialogTitle>
+          {target ? "Edit" : "New"} {DIALOG_TITLES[kind]}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2.5} sx={{ pt: 1 }}>
+            <ToggleButtonGroup
+              value={kind}
+              exclusive
+              fullWidth
+              size="small"
+              onChange={(_, next: targetKind | null) => next && setKind(next)}
+            >
+              {KINDS.map((k) => {
+                const Icon = KIND_CONFIG[k].icon;
+                return (
+                  <ToggleButton
+                    key={k}
+                    value={k}
+                    sx={{
+                      gap: 0.75,
+                      "&.Mui-selected": {
+                        color: KIND_CONFIG[k].accent,
+                        backgroundColor: KIND_CONFIG[k].accentSoft,
+                      },
+                    }}
+                  >
+                    <Icon fontSize="small" />
+                    {KIND_CONFIG[k].label}
+                  </ToggleButton>
+                );
+              })}
+            </ToggleButtonGroup>
             <TextField
               label="Title"
-              placeholder="e.g. Emergency Fund"
+              placeholder={config.titlePlaceholder}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              error={!!titleError}
-              helperText={titleError}
+              error={touched && !!titleError}
+              helperText={touched && titleError}
               autoFocus
               fullWidth
             />
+            {isLoan && (
+              <TextField
+                label={config.counterpartyLabel}
+                placeholder={kind === "debt" ? "Person or bank" : "Person"}
+                value={counterparty}
+                onChange={(e) => setCounterparty(e.target.value)}
+                fullWidth
+              />
+            )}
             <TextField
-              label="Target amount"
+              label={config.totalLabel}
               type="number"
               value={targetNumber}
               onChange={(e) => setTargetNumber(e.target.value)}
-              error={!!targetError}
-              helperText={targetError}
+              error={touched && !!targetError}
+              helperText={touched && targetError}
               slotProps={rupee}
               fullWidth
             />
             <TextField
-              label="Already saved"
+              label={config.progressLabel}
               type="number"
               value={currentNumber}
               onChange={(e) => setCurrentNumber(e.target.value)}
-              error={!!currentError}
-              helperText={currentError}
+              error={touched && !!currentError}
+              helperText={touched && currentError}
               slotProps={rupee}
               fullWidth
             />
+            {isLoan && (
+              <TextField
+                label="Due date (optional)"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }}
+                fullWidth
+              />
+            )}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -123,7 +190,7 @@ export const TargetFormDialog = ({
             Cancel
           </Button>
           <Button type="submit" variant="contained" disabled={submitting}>
-            {target ? "Save changes" : "Create goal"}
+            {target ? "Save changes" : "Create"}
           </Button>
         </DialogActions>
       </form>

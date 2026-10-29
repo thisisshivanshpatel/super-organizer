@@ -1,3 +1,5 @@
+export * from "./kinds";
+
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
@@ -15,6 +17,16 @@ export const formatDateTime = (sqliteDate: string) =>
     hour: "numeric",
     minute: "2-digit",
   });
+
+// Due dates are stored as plain "YYYY-MM-DD" (no time zone)
+export const formatDate = (isoDate: string) =>
+  new Date(isoDate + "T00:00:00").toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
+export const todayISO = () => new Date().toLocaleDateString("en-CA");
 
 // Errors thrown in the main process arrive wrapped as
 // "Error invoking remote method 'x': Error: <message>"; keep only <message>

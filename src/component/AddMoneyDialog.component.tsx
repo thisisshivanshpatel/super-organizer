@@ -12,16 +12,17 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { targetStruct } from "../types";
-import { formatCurrency } from "../utils";
+import { targetStruct, transactionType } from "../types";
+import { formatCurrency, KIND_CONFIG } from "../utils";
 
 type AddMoneyDialogProps = {
   target: targetStruct | null;
-  onSubmit: (amount: number, note: string) => Promise<void>;
+  // amount is signed for balance changes; principal changes are always positive
+  onSubmit: (type: transactionType, amount: number, note: string) => Promise<void>;
   onClose: () => void;
 };
 
-type mode = "deposit" | "withdraw";
+type mode = "primary" | "secondary";
 
 const QUICK_AMOUNTS = [1000, 5000, 10000];
 
@@ -30,34 +31,53 @@ export const AddMoneyDialog = ({
   onSubmit,
   onClose,
 }: AddMoneyDialogProps) => {
-  const [mode, setMode] = useState<mode>("deposit");
+  const [mode, setMode] = useState<mode>("primary");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (target) {
-      setMode("deposit");
+      setMode("primary");
       setAmount("");
       setNote("");
     }
   }, [target]);
 
+  const kind = target?.kind ?? "savings";
+  const config = KIND_CONFIG[kind];
+  const isLoan = kind !== "savings";
+  const outstanding = target ? target.targetNumber - target.currentNumber : 0;
+
   const value = Number(amount);
-  const tooMuch =
-    mode === "withdraw" && target !== null && value > target.currentNumber;
-  const isValid = value > 0 && !tooMuch;
+  let limitError = "";
+  if (target && kind === "savings" && mode === "secondary" && value > target.currentNumber)
+    limitError = "Cannot withdraw more than saved";
+  if (target && isLoan && mode === "primary" && value > outstanding)
+    limitError = `Only ${formatCurrency(outstanding)} is outstanding`;
+  const isValid = value > 0 && !limitError;
+
+  // Positive outcome (saving / getting closer to settled) uses the success color
+  const positive = mode === "primary";
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isValid) return;
     setSubmitting(true);
     try {
-      await onSubmit(mode === "deposit" ? value : -value, note);
+      if (mode === "primary") await onSubmit("balance", value, note);
+      else if (isLoan) await onSubmit("principal", value, note);
+      else await onSubmit("balance", -value, note);
     } finally {
       setSubmitting(false);
     }
   };
+
+  const summary = target
+    ? isLoan
+      ? `${formatCurrency(outstanding)} outstanding of ${formatCurrency(target.targetNumber)}`
+      : `Saved ${formatCurrency(target.currentNumber)} of ${formatCurrency(target.targetNumber)}`
+    : "";
 
   return (
     <Dialog open={!!target} onClose={onClose} maxWidth="xs" fullWidth>
@@ -66,27 +86,27 @@ export const AddMoneyDialog = ({
         <DialogContent>
           <Stack spacing={2.5}>
             <Typography variant="body2" color="text.secondary">
-              Saved {formatCurrency(target?.currentNumber ?? 0)} of{" "}
-              {formatCurrency(target?.targetNumber ?? 0)}
+              {summary}
+              {target?.counterparty && ` · ${config.counterpartyLabel} ${target.counterparty}`}
             </Typography>
             <ToggleButtonGroup
               value={mode}
               exclusive
               fullWidth
               size="small"
-              color={mode === "deposit" ? "success" : "warning"}
+              color={positive ? "success" : "warning"}
               onChange={(_, next: mode | null) => next && setMode(next)}
             >
-              <ToggleButton value="deposit">Add money</ToggleButton>
-              <ToggleButton value="withdraw">Withdraw</ToggleButton>
+              <ToggleButton value="primary">{config.primaryMode}</ToggleButton>
+              <ToggleButton value="secondary">{config.secondaryMode}</ToggleButton>
             </ToggleButtonGroup>
             <TextField
               label="Amount"
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              error={tooMuch}
-              helperText={tooMuch ? "Cannot withdraw more than saved" : ""}
+              error={!!limitError}
+              helperText={limitError}
               autoFocus
               fullWidth
               slotProps={{
@@ -98,7 +118,7 @@ export const AddMoneyDialog = ({
                 htmlInput: { min: 0, step: "any" },
               }}
             />
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
               {QUICK_AMOUNTS.map((quick) => (
                 <Button
                   key={quick}
@@ -109,11 +129,21 @@ export const AddMoneyDialog = ({
                   {formatCurrency(quick)}
                 </Button>
               ))}
+              {isLoan && mode === "primary" && outstanding > 0 && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="success"
+                  onClick={() => setAmount(String(outstanding))}
+                >
+                  Full {formatCurrency(outstanding)}
+                </Button>
+              )}
             </Stack>
             <TextField
               label="Note (optional)"
               placeholder={
-                mode === "deposit" ? "e.g. October salary" : "e.g. Car repair"
+                mode === "primary" ? config.primaryNoteHint : config.secondaryNoteHint
               }
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -129,10 +159,10 @@ export const AddMoneyDialog = ({
           <Button
             type="submit"
             variant="contained"
-            color={mode === "deposit" ? "success" : "warning"}
+            color={positive ? "success" : "warning"}
             disabled={!isValid || submitting}
           >
-            {mode === "deposit" ? "Add" : "Withdraw"}
+            {mode === "primary" ? config.primaryMode : config.secondaryMode}
           </Button>
         </DialogActions>
       </form>
