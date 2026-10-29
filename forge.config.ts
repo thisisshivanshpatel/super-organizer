@@ -1,3 +1,6 @@
+import { execFileSync } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
@@ -15,6 +18,19 @@ const config: ForgeConfig = {
     icon: 'assets/icon',
   },
   rebuildConfig: {},
+  hooks: {
+    // Packaging edits the app bundle, which invalidates Electron's ad-hoc signature, and
+    // macOS then reports the downloaded app as "damaged". Re-sign it ad-hoc (no Apple
+    // Developer account needed); the DMG/zip makers run after this and pick up the signed app.
+    postPackage: async (_config, { platform, outputPaths }) => {
+      if (platform !== 'darwin') return;
+      for (const dir of outputPaths) {
+        for (const entry of fs.readdirSync(dir).filter((f) => f.endsWith('.app'))) {
+          execFileSync('codesign', ['--force', '--deep', '--sign', '-', path.join(dir, entry)]);
+        }
+      }
+    },
+  },
   makers: [
     new MakerSquirrel({ setupIcon: 'assets/icon.ico' }),
     new MakerZIP({}, ['darwin']),
