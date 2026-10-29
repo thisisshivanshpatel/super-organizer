@@ -17,7 +17,7 @@ import { formatCurrency } from "../utils";
 
 type AddMoneyDialogProps = {
   target: targetStruct | null;
-  onSubmit: (amount: number) => Promise<void>;
+  onSubmit: (amount: number, note: string) => Promise<void>;
   onClose: () => void;
 };
 
@@ -32,12 +32,14 @@ export const AddMoneyDialog = ({
 }: AddMoneyDialogProps) => {
   const [mode, setMode] = useState<mode>("deposit");
   const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (target) {
       setMode("deposit");
       setAmount("");
+      setNote("");
     }
   }, [target]);
 
@@ -51,7 +53,7 @@ export const AddMoneyDialog = ({
     if (!isValid) return;
     setSubmitting(true);
     try {
-      await onSubmit(mode === "deposit" ? value : -value);
+      await onSubmit(mode === "deposit" ? value : -value, note);
     } finally {
       setSubmitting(false);
     }
@@ -108,6 +110,16 @@ export const AddMoneyDialog = ({
                 </Button>
               ))}
             </Stack>
+            <TextField
+              label="Note (optional)"
+              placeholder={
+                mode === "deposit" ? "e.g. October salary" : "e.g. Car repair"
+              }
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              slotProps={{ htmlInput: { maxLength: 200 } }}
+              fullWidth
+            />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

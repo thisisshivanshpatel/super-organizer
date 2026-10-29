@@ -7,6 +7,7 @@ import {
   createTarget,
   deleteTarget,
   listTargets,
+  listTransactions,
   updateTarget,
 } from "./database/db";
 
@@ -54,9 +55,10 @@ app.on("ready", createWindow);
 ipcMain.handle("targets:list", () => listTargets());
 ipcMain.handle("targets:create", (event, input) => createTarget(input));
 ipcMain.handle("targets:update", (event, id, input) => updateTarget(id, input));
-ipcMain.handle("targets:add-amount", (event, id, amount) =>
-  addToTarget(id, amount),
+ipcMain.handle("targets:add-amount", (event, id, amount, note) =>
+  addToTarget(id, amount, note),
 );
+ipcMain.handle("targets:transactions", (event, id) => listTransactions(id));
 ipcMain.handle("targets:delete", (event, id) => deleteTarget(id));
 
 // Quit when all windows are closed, except on macOS. There, it's common

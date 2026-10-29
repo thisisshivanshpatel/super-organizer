@@ -3,7 +3,7 @@ import LinearProgress, {
   linearProgressClasses,
 } from "@mui/material/LinearProgress";
 import { Button, Chip } from "@mui/material";
-import { CheckCircle, Savings } from "@mui/icons-material";
+import { CheckCircle, History, Savings } from "@mui/icons-material";
 import { targetStruct } from "../types";
 import { formatCurrency } from "../utils";
 import { MenuListComposition } from "./generics/MenuList.component";
@@ -26,11 +26,18 @@ const BorderLinearProgress = styled(LinearProgress)(({ theme }) => ({
 type TargetProps = {
   target: targetStruct;
   onAddMoney: (target: targetStruct) => void;
+  onHistory: (target: targetStruct) => void;
   onEdit: (target: targetStruct) => void;
   onDelete: (target: targetStruct) => void;
 };
 
-export const Target = ({ target, onAddMoney, onEdit, onDelete }: TargetProps) => {
+export const Target = ({
+  target,
+  onAddMoney,
+  onHistory,
+  onEdit,
+  onDelete,
+}: TargetProps) => {
   const { title, targetNumber, currentNumber } = target;
 
   // Progress is shown as a percentage of the target value
@@ -57,6 +64,7 @@ export const Target = ({ target, onAddMoney, onEdit, onDelete }: TargetProps) =>
           </div>
         </div>
         <MenuListComposition
+          onHistory={() => onHistory(target)}
           onEdit={() => onEdit(target)}
           onDelete={() => onDelete(target)}
         />
@@ -86,14 +94,26 @@ export const Target = ({ target, onAddMoney, onEdit, onDelete }: TargetProps) =>
         </div>
       </div>
 
-      <Button
-        variant="contained"
-        disableElevation
-        onClick={() => onAddMoney(target)}
-        sx={{ borderRadius: 3, py: 1 }}
-      >
-        Add / Withdraw
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="contained"
+          disableElevation
+          fullWidth
+          onClick={() => onAddMoney(target)}
+          sx={{ borderRadius: 3, py: 1 }}
+        >
+          Add / Withdraw
+        </Button>
+        <Button
+          variant="outlined"
+          aria-label="Transaction history"
+          title="Transaction history"
+          onClick={() => onHistory(target)}
+          sx={{ borderRadius: 3, minWidth: 48 }}
+        >
+          <History />
+        </Button>
+      </div>
     </div>
   );
 };

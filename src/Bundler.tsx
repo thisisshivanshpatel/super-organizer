@@ -12,6 +12,7 @@ import {
   ConfirmDialog,
   Target,
   TargetFormDialog,
+  TransactionHistoryDialog,
 } from "./component";
 import { targetInput, targetStruct } from "./types";
 import { formatCurrency, getErrorMessage } from "./utils";
@@ -30,6 +31,7 @@ export const Bundler = () => {
   const [editing, setEditing] = useState<targetStruct | null>(null);
   const [funding, setFunding] = useState<targetStruct | null>(null);
   const [deleting, setDeleting] = useState<targetStruct | null>(null);
+  const [historyOf, setHistoryOf] = useState<targetStruct | null>(null);
 
   const notifyError = (error: unknown) =>
     setToast({ severity: "error", message: getErrorMessage(error) });
@@ -69,10 +71,10 @@ export const Bundler = () => {
     }
   };
 
-  const handleAddAmount = async (amount: number) => {
+  const handleAddAmount = async (amount: number, note: string) => {
     if (!funding) return;
     try {
-      replaceTarget(await api.addAmount(funding.id, amount));
+      replaceTarget(await api.addAmount(funding.id, amount, note));
       setFunding(null);
       setToast({
         severity: "success",
@@ -211,6 +213,7 @@ export const Bundler = () => {
               key={target.id}
               target={target}
               onAddMoney={setFunding}
+              onHistory={setHistoryOf}
               onEdit={openEdit}
               onDelete={setDeleting}
             />
@@ -229,10 +232,14 @@ export const Bundler = () => {
         onSubmit={handleAddAmount}
         onClose={() => setFunding(null)}
       />
+      <TransactionHistoryDialog
+        target={historyOf}
+        onClose={() => setHistoryOf(null)}
+      />
       <ConfirmDialog
         open={!!deleting}
         title="Delete goal?"
-        message={`"${deleting?.title ?? ""}" and its progress will be permanently removed.`}
+        message={`"${deleting?.title ?? ""}" and its transaction history will be permanently removed.`}
         onConfirm={handleDelete}
         onClose={() => setDeleting(null)}
       />

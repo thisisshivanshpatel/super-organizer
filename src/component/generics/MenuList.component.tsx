@@ -8,14 +8,16 @@ import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import { Delete, Edit, MoreHoriz } from "@mui/icons-material";
+import { Delete, Edit, History, MoreHoriz } from "@mui/icons-material";
 
 type MenuListCompositionProps = {
+  onHistory: () => void;
   onEdit: () => void;
   onDelete: () => void;
 };
 
 export function MenuListComposition({
+  onHistory,
   onEdit,
   onDelete,
 }: MenuListCompositionProps) {
@@ -98,6 +100,12 @@ export function MenuListComposition({
                   id={menuId}
                   onKeyDown={handleListKeyDown}
                 >
+                  <MenuItem onClick={handleSelect(onHistory)}>
+                    <ListItemIcon>
+                      <History fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>History</ListItemText>
+                  </MenuItem>
                   <MenuItem onClick={handleSelect(onEdit)}>
                     <ListItemIcon>
                       <Edit fontSize="small" />
