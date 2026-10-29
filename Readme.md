@@ -37,3 +37,14 @@ so no native module needs to be rebuilt.
 | Preload          | `src/preload.ts`        | Exposes `window.electronAPI.targets` to the renderer         |
 | Renderer         | `src/Bundler.tsx`       | Loads goals and manages the create/edit/delete/add-money dialogs |
 | Components       | `src/component/`        | Goal card, form dialog, add-money dialog, menu, confirm dialog |
+
+
+## Building
+
+```bash
+npm run make                                              # DMG + zip for your Mac (Apple Silicon)
+npm run make -- --targets @electron-forge/maker-dmg       # DMG only
+npm run make -- --arch=x64                                # for Intel Macs
+npm run make -- --arch=universal                          # one DMG for both
+
+```
