@@ -17,6 +17,16 @@ if (started) {
   app.quit();
 }
 
+// The data folder defaults to productName; pin it so renaming the app never
+// points it at a new, empty database
+app.setPath("userData", path.join(app.getPath("appData"), "super-organizer"));
+
+// Packaged builds take their icon from the app bundle / exe (see forge.config.ts);
+// in development point Electron at the source PNG instead
+const devIconPath = MAIN_WINDOW_VITE_DEV_SERVER_URL
+  ? path.join(__dirname, "../../assets/icon.png")
+  : undefined;
+
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -25,6 +35,7 @@ const createWindow = () => {
     minWidth: 420,
     minHeight: 500,
     backgroundColor: "#f5e9d8",
+    icon: devIconPath,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       webSecurity: false,
@@ -50,7 +61,12 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on("ready", createWindow);
+app.on("ready", () => {
+  if (devIconPath && process.platform === "darwin") {
+    app.dock?.setIcon(devIconPath);
+  }
+  createWindow();
+});
 
 // IPC handlers for target CRUD operations (backed by SQLite)
 ipcMain.handle("targets:list", () => listTargets());
